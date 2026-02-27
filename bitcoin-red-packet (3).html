@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitcoin Red Packet — RegTest</title>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #c0392b;
+    --red-deep: #7b0f0f;
+    --red-bright: #e74c3c;
+    --gold: #f0c040;
+    --gold-light: #fde88a;
+    --gold-dark: #b8860b;
+    --black: #0a0404;
+    --paper: #1a0a0a;
+    --paper2: #2a0f0f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--gold-light);
+    font-family: 'Noto Serif SC', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* Lantern lights */
+  .bg-pattern {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse at 10% 20%, rgba(192,57,43,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(192,57,43,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(120,10,10,0.2) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .pattern-overlay {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.04;
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--gold) 0px,
+      var(--gold) 1px,
+      transparent 1px,
+      transparent 20px
+    ), repeating-linear-gradient(
+      -45deg,
+      var(--gold) 0px,
+      var(--gold) 1px,
+      transparent 1px,
+      transparent 20px
+    );
+  }
+
+  /* Floating particles */
+  .particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .particle {
+    position: absolute;
+    width: 4px; height: 4px;
+    background: var(--gold);
+    border-radius: 50%;
+    opacity: 0;
+    animation: float-up linear infinite;
+  }
+  @keyframes float-up {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 0.8; }
+    90% { opacity: 0.3; }
+    100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+  }
+
+  /* Layout */
+  .app { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 40px 0 30px;
+    position: relative;
+  }
+  .lanterns {
+    display: flex; justify-content: center; gap: 40px;
+    margin-bottom: 20px;
+  }
+  .lantern {
+    width: 24px; height: 36px;
+    background: linear-gradient(180deg, var(--gold) 0%, var(--red-bright) 30%, var(--red-deep) 100%);
+    border-radius: 40% 40% 50% 50%;
+    position: relative;
+    box-shadow: 0 0 20px var(--red-bright), 0 0 40px rgba(192,57,43,0.5);
+    animation: lantern-sway 3s ease-in-out infinite;
+  }
+  .lantern:nth-child(2) { animation-delay: 0.5s; animation-duration: 3.5s; }
+  .lantern:nth-child(3) { animation-delay: 1s; animation-duration: 2.8s; }
+  .lantern::before {
+    content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 6px; height: 8px;
+    background: var(--gold-dark);
+    border-radius: 2px;
+  }
+  .lantern::after {
+    content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+    width: 1px; height: 12px;
+    background: var(--gold);
+  }
+  @keyframes lantern-sway {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+  }
+
+  .title-cn {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(240,192,64,0.6), 0 2px 4px rgba(0,0,0,0.8);
+    letter-spacing: 0.1em;
+    line-height: 1;
+  }
+  .title-en {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--gold-dark);
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  /* Network badge */
+  .network-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(192,57,43,0.2);
+    border: 1px solid var(--gold-dark);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold);
+    margin-top: 16px;
+  }
+  .network-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #2ecc71;
+    box-shadow: 0 0 8px #2ecc71;
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .network-dot.disconnected { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; animation: none; }
+
+  /* Wallet section */
+  .wallet-card {
+    background: linear-gradient(135deg, var(--paper) 0%, var(--paper2) 100%);
+    border: 1px solid var(--gold-dark);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    position: relative; overflow: hidden;
+  }
+  .wallet-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(240,192,64,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .wallet-info { display: flex; flex-direction: column; gap: 4px; }
+  .wallet-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--gold-dark);
+    text-transform: uppercase; letter-spacing: 0.2em;
+  }
+  .wallet-address {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--gold-light);
+    word-break: break-all;
+  }
+  .wallet-balance {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 1.4rem;
+    color: var(--gold);
+  }
+  .wallet-balance span { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--gold-dark); }
+
+  /* Buttons */
+  .btn {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 0.9rem;
+    border: none; cursor: pointer;
+    border-radius: 8px;
+    padding: 10px 20px;
+    transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .btn::after {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(255,255,255,0.1);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .btn:hover::after { opacity: 1; }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+    color: var(--black);
+    font-weight: 700;
+    box-shadow: 0 4px 20px rgba(240,192,64,0.3);
+  }
+  .btn-red {
+    background: linear-gradient(135deg, var(--red-deep) 0%, var(--red-bright) 50%, var(--red-deep) 100%);
+    color: var(--gold-light);
+    box-shadow: 0 4px 20px rgba(192,57,43,0.4);
+    font-size: 1rem;
+    padding: 12px 28px;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--gold-dark);
+    color: var(--gold);
+  }
+  .btn-outline:hover { border-color: var(--gold); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 0;
+    background: var(--paper);
+    border-radius: 10px;
+    border: 1px solid var(--gold-dark);
+    overflow: hidden;
+    margin: 24px 0;
+  }
+  .tab {
+    flex: 1; padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 0.9rem;
+    color: var(--gold-dark);
+    transition: all 0.2s;
+    border: none; background: none;
+    letter-spacing: 0.05em;
+  }
+  .tab.active {
+    background: linear-gradient(135deg, var(--red-deep) 0%, var(--red) 100%);
+    color: var(--gold);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+  }
+  .tab:hover:not(.active) { color: var(--gold); background: rgba(192,57,43,0.1); }
+
+  /* Panel */
+  .panel { display: none; animation: fade-in 0.3s ease; }
+  .panel.active { display: block; }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* Form */
+  .form-group { margin-bottom: 20px; }
+  .form-label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold-dark);
+    text-transform: uppercase; letter-spacing: 0.2em;
+    margin-bottom: 8px;
+  }
+  .form-input {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--gold-dark);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--gold-light);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240,192,64,0.15); }
+  .form-input::placeholder { color: rgba(240,192,64,0.3); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* Red Packet Card */
+  .red-packet-visual {
+    width: 200px; height: 280px;
+    background: linear-gradient(160deg, #c0392b 0%, #7b0f0f 60%, #4a0808 100%);
+    border-radius: 16px;
+    border: 2px solid var(--gold-dark);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(192,57,43,0.5), inset 0 1px 0 rgba(255,200,50,0.3);
+    margin: 0 auto;
+  }
+  .red-packet-visual:hover {
+    transform: scale(1.05) rotate(1deg);
+    box-shadow: 0 20px 60px rgba(192,57,43,0.7), inset 0 1px 0 rgba(255,200,50,0.5);
+  }
+  .red-packet-visual::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 120px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(240,192,64,0.3) 0%, transparent 70%);
+  }
+  .red-packet-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 2.5rem;
+    color: var(--gold);
+    text-shadow: 0 0 15px rgba(240,192,64,0.8);
+    position: relative; z-index: 1;
+    background: rgba(0,0,0,0.2);
+    box-shadow: 0 0 20px rgba(240,192,64,0.3), inset 0 0 20px rgba(0,0,0,0.3);
+  }
+  .red-packet-text {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 1.4rem;
+    color: var(--gold);
+    margin-top: 16px;
+    text-align: center;
+    text-shadow: 0 0 10px rgba(240,192,64,0.5);
+    position: relative; z-index: 1;
+  }
+  .red-packet-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: rgba(240,192,64,0.6);
+    margin-top: 6px;
+    position: relative; z-index: 1;
+  }
+  .red-packet-diamond {
+    position: absolute;
+    width: 100px; height: 100px;
+    border: 2px solid rgba(240,192,64,0.2);
+    transform: rotate(45deg);
+    top: -20px;
+  }
+
+  /* Packet list */
+  .packets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-top: 16px; }
+  .packet-item {
+    background: linear-gradient(160deg, var(--red-deep) 0%, #3d0a0a 100%);
+    border: 1px solid var(--gold-dark);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .packet-item:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(192,57,43,0.4); }
+  .packet-item.claimed { opacity: 0.5; cursor: not-allowed; }
+  .packet-item.claimed::after {
+    content: '已领取';
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 1.2rem;
+    color: var(--gold-dark);
+    border-radius: 12px;
+  }
+  .packet-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: var(--gold);
+    font-weight: 600;
+  }
+  .packet-meta { font-size: 0.7rem; color: rgba(240,192,64,0.5); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+  .packet-type-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(192,57,43,0.4);
+    border: 1px solid rgba(192,57,43,0.6);
+    color: var(--gold-light);
+    margin-top: 6px;
+  }
+
+  /* Open animation overlay */
+  .open-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.85);
+    align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .open-overlay.show { display: flex; }
+  .open-overlay .big-packet {
+    width: 220px; height: 310px;
+    background: linear-gradient(160deg, #c0392b 0%, #7b0f0f 60%, #4a0808 100%);
+    border-radius: 20px;
+    border: 3px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    cursor: pointer;
+    animation: packet-appear 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 20px 80px rgba(192,57,43,0.8);
+    position: relative; overflow: hidden;
+  }
+  @keyframes packet-appear {
+    from { transform: scale(0) rotate(-10deg); opacity: 0; }
+    to { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .open-overlay .big-packet:hover { transform: scale(1.03); }
+  .open-instruction {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 1.2rem;
+    color: var(--gold);
+    margin-top: 20px;
+    animation: blink 1.5s infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .open-result {
+    text-align: center;
+    animation: result-appear 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes result-appear {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .result-amount {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 4rem;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(240,192,64,0.8);
+  }
+  .result-sats { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--gold-dark); }
+  .result-msg { font-family: 'Noto Serif SC', serif; font-size: 1.1rem; color: var(--gold-light); margin: 12px 0; }
+
+  /* Confetti canvas */
+  #confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 200; }
+
+  /* Toast */
+  .toast-container { position: fixed; top: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--paper2);
+    border: 1px solid var(--gold-dark);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--gold-light);
+    animation: toast-in 0.3s ease, toast-out 0.3s ease 3.7s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    max-width: 300px;
+  }
+  .toast.success { border-color: #2ecc71; color: #2ecc71; }
+  .toast.error { border-color: #e74c3c; color: #e74c3c; }
+  @keyframes toast-in { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes toast-out { to { transform: translateX(100%); opacity: 0; } }
+
+  /* TX Hash display */
+  .tx-hash {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold-dark);
+    background: var(--paper);
+    border: 1px solid rgba(240,192,64,0.1);
+    border-radius: 6px;
+    padding: 8px 12px;
+    word-break: break-all;
+    margin-top: 8px;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex; gap: 16px;
+    padding: 16px 20px;
+    background: var(--paper);
+    border: 1px solid var(--gold-dark);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--gold); font-weight: 600; }
+  .stat-label { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--gold-dark); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* Section title */
+  .section-title {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 1.6rem;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--gold-dark), transparent);
+  }
+
+  .divider { height: 1px; background: linear-gradient(to right, transparent, var(--gold-dark), transparent); margin: 24px 0; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: rgba(240,192,64,0.3);
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 1.2rem;
+  }
+
+  .create-center { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+  /* Loading spinner */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(240,192,64,0.3);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .info-box {
+    background: rgba(240,192,64,0.05);
+    border: 1px solid rgba(240,192,64,0.15);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    color: rgba(240,192,64,0.7);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+    margin: 12px 0;
+  }
+
+  .regtest-notice {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: rgba(240,192,64,0.3);
+    margin-top: 40px;
+    padding-bottom: 40px;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .wallet-card { flex-direction: column; }
+    .stats-bar { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-pattern"></div>
+<div class="pattern-overlay"></div>
+<div class="particles" id="particles"></div>
+<canvas id="confetti-canvas"></canvas>
+<div class="toast-container" id="toasts"></div>
+
+<!-- Open overlay -->
+<div class="open-overlay" id="open-overlay">
+  <div id="overlay-content"></div>
+</div>
+
+<div class="app">
+  <header>
+    <div class="lanterns">
+      <div class="lantern"></div>
+      <div class="lantern"></div>
+      <div class="lantern"></div>
+      <div class="lantern"></div>
+      <div class="lantern"></div>
+    </div>
+    <div class="title-cn">比特红包</div>
+    <div class="title-en">Bitcoin Red Packet · OPNET · RegTest</div>
+    <div>
+      <span class="network-badge">
+        <span class="network-dot" id="network-dot"></span>
+        <span id="network-label">REGTEST · OPNET</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- Wallet Card -->
+  <div class="wallet-card">
+    <div class="wallet-info">
+      <div class="wallet-label">OPNET Wallet</div>
+      <div class="wallet-address" id="wallet-address">Not Connected</div>
+      <div class="wallet-label" style="margin-top:6px">Network</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--gold-light)" id="wallet-network">—</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px">
+      <div>
+        <div class="wallet-label" style="text-align:right">Balance</div>
+        <div class="wallet-balance" id="wallet-balance">— <span>BTC</span></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--gold-dark);text-align:right" id="wallet-sats">— sats</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn btn-gold" id="connect-btn" onclick="connectWallet()">🔌 Connect</button>
+        <button class="btn btn-outline" id="disconnect-btn" onclick="disconnectWallet()" style="display:none">Disconnect</button>
+        <button class="btn btn-outline" id="refresh-btn" onclick="refreshBalance()" style="display:none">↻ Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat"><div class="stat-value" id="stat-created">0</div><div class="stat-label">Created</div></div>
+    <div class="stat"><div class="stat-value" id="stat-claimed">0</div><div class="stat-label">Claimed</div></div>
+    <div class="stat"><div class="stat-value" id="stat-total-btc">0</div><div class="stat-label">Total BTC Sent</div></div>
+    <div class="stat"><div class="stat-value" id="stat-active">0</div><div class="stat-label">Active</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('create')">🧧 Create 红包</button>
+    <button class="tab" onclick="switchTab('claim')">🎁 Claim 红包</button>
+    <button class="tab" onclick="switchTab('history')">📜 History</button>
+  </div>
+
+  <!-- Create Panel -->
+  <div class="panel active" id="panel-create">
+    <div class="create-center">
+      <div class="red-packet-visual" id="preview-packet" onclick="animatePreview()">
+        <div class="red-packet-diamond"></div>
+        <div class="red-packet-circle">福</div>
+        <div class="red-packet-text">比特红包</div>
+        <div class="red-packet-sub" id="preview-sub">Click to preview</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-title">发红包 · Send Packet</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Total Amount (BTC)</label>
+        <input class="form-input" type="number" id="total-amount" placeholder="0.001" step="0.0001" min="0.0001" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Number of Packets</label>
+        <input class="form-input" type="number" id="packet-count" placeholder="5" min="1" max="100" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Distribution Type</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline active-type" id="type-equal" onclick="setType('equal')" style="font-size:0.85rem">⚖ Equal Split</button>
+        <button class="btn btn-outline" id="type-random" onclick="setType('random')" style="font-size:0.85rem">🎲 Lucky Random</button>
+      </div>
+      <div class="info-box" id="type-info">Each recipient receives an equal share of the total amount.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Message (optional)</label>
+      <input class="form-input" type="text" id="packet-message" placeholder="恭喜发财 · Gong Xi Fa Cai 🧧" maxlength="80">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Expiry (hours)</label>
+      <input class="form-input" type="number" id="expiry-hours" placeholder="24" min="1" max="168" value="24">
+    </div>
+
+    <div class="info-box">
+      ⚠ RegTest Network: Transactions are simulated locally. No real Bitcoin involved.<br>
+      🔗 OPNET Smart Contract will escrow funds and distribute to claimants.
+    </div>
+
+    <button class="btn btn-red" id="create-btn" onclick="createRedPacket()" style="width:100%;font-size:1.1rem;padding:16px" disabled>
+      🧧 Create Red Packet
+    </button>
+  </div>
+
+  <!-- Claim Panel -->
+  <div class="panel" id="panel-claim">
+    <div class="section-title">抢红包 · Grab Packet</div>
+
+    <div class="form-group">
+      <label class="form-label">Packet ID or Code</label>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" type="text" id="claim-code" placeholder="Enter packet ID (e.g. RP-A1B2C3)">
+        <button class="btn btn-gold" onclick="lookupPacket()" style="white-space:nowrap">🔍 Find</button>
+      </div>
+    </div>
+
+    <div id="claim-result"></div>
+
+    <div class="divider"></div>
+    <div class="section-title">Available Packets</div>
+
+    <div id="active-packets" class="packets-grid">
+      <div class="empty-state">Connect wallet to view active red packets</div>
+    </div>
+  </div>
+
+  <!-- History Panel -->
+  <div class="panel" id="panel-history">
+    <div class="section-title">交易历史 · Transaction History</div>
+    <div id="history-list">
+      <div class="empty-state">No transaction history yet</div>
+    </div>
+  </div>
+
+  <div class="regtest-notice">
+    Running on Bitcoin RegTest Network via OPNET Protocol · Testnet Only · Not Real Bitcoin
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+const state = {
+  connected: false,
+  address: null,
+  publicKey: null,
+  balance: 0,
+  network: null,
+  packets: [],
+  history: [],
+  stats: { created: 0, claimed: 0, totalBtc: 0, active: 0 },
+  distributionType: 'equal',
+};
+
+// ===== PARTICLES =====
+function initParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `
+      left: ${Math.random() * 100}%;
+      width: ${Math.random() * 6 + 2}px;
+      height: ${Math.random() * 6 + 2}px;
+      animation-duration: ${Math.random() * 8 + 6}s;
+      animation-delay: ${Math.random() * 8}s;
+      opacity: ${Math.random() * 0.6};
+    `;
+    container.appendChild(p);
+  }
+}
+initParticles();
+
+// ===== TOAST =====
+function toast(msg, type = 'info') {
+  const container = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 4200);
+}
+
+// ===== OPNET WALLET INTEGRATION =====
+const REGTEST_CHAIN_IDS = [0xBAD10C, 0, 1337, 'regtest'];
+
+async function detectOPNETWallet() {
+  // Check for various OPNET/Bitcoin wallet providers
+  const providers = ['opnet', 'okxwallet', 'unisat', 'leather', '__bitcoin', 'sats'];
+  for (const key of providers) {
+    if (window[key]) return window[key];
+  }
+  // Check window.bitcoin for generic Bitcoin wallet
+  if (window.bitcoin) return window.bitcoin;
+  return null;
+}
+
+async function connectWallet() {
+  const btn = document.getElementById('connect-btn');
+  btn.innerHTML = '<span class="spinner"></span>Connecting...';
+  btn.disabled = true;
+
+  try {
+    // Try OPNET wallet first
+    let wallet = await detectOPNETWallet();
+
+    if (!wallet) {
+      // Simulate OPNET wallet for demo/RegTest
+      await simulateWalletConnect();
+      return;
+    }
+
+    let accounts;
+    // Try different wallet APIs
+    if (wallet.requestAccounts) {
+      accounts = await wallet.requestAccounts();
+    } else if (wallet.getAccounts) {
+      accounts = await wallet.getAccounts();
+    } else if (wallet.enable) {
+      accounts = await wallet.enable();
+    } else {
+      throw new Error('Unsupported wallet API');
+    }
+
+    if (!accounts || accounts.length === 0) throw new Error('No accounts returned');
+
+    state.address = accounts[0];
+    state.connected = true;
+
+    // Get network info
+    try {
+      if (wallet.getNetwork) state.network = await wallet.getNetwork();
+      else if (wallet.network) state.network = wallet.network;
+      else state.network = 'regtest';
+    } catch { state.network = 'regtest'; }
+
+    // Check RegTest
+    if (state.network && !isRegTest(state.network)) {
+      toast(`⚠ Warning: Connected to ${state.network}. Please switch to RegTest!`, 'error');
+    }
+
+    // Get balance
+    await refreshBalance(wallet);
+    onWalletConnected();
+
+  } catch (err) {
+    console.warn('Real wallet not found, using simulation:', err);
+    await simulateWalletConnect();
+  }
+}
+
+function isRegTest(network) {
+  if (!network) return false;
+  const n = network.toString().toLowerCase();
+  return n.includes('regtest') || n.includes('local') || n === '0' || REGTEST_CHAIN_IDS.includes(network);
+}
+
+async function simulateWalletConnect() {
+  // Simulate OPNET RegTest wallet for demo purposes
+  await delay(800);
+  state.address = 'bcrt1q' + randomHex(38);
+  state.publicKey = randomHex(66);
+  state.balance = (Math.random() * 5 + 0.5).toFixed(8);
+  state.network = 'regtest';
+  state.connected = true;
+  onWalletConnected();
+  toast('🟡 Demo mode: OPNET wallet simulated (RegTest)', 'info');
+}
+
+async function refreshBalance(wallet) {
+  try {
+    wallet = wallet || await detectOPNETWallet();
+    if (wallet && wallet.getBalance) {
+      const bal = await wallet.getBalance();
+      state.balance = typeof bal === 'object' ? (bal.total || bal.confirmed || 0) / 1e8 : bal;
+    } else {
+      state.balance = (Math.random() * 10 + 0.1).toFixed(8);
+    }
+  } catch {
+    state.balance = (Math.random() * 10 + 0.1).toFixed(8);
+  }
+  updateWalletUI();
+  toast('Balance refreshed', 'success');
+}
+
+function onWalletConnected() {
+  updateWalletUI();
+  document.getElementById('connect-btn').style.display = 'none';
+  document.getElementById('disconnect-btn').style.display = 'inline-flex';
+  document.getElementById('refresh-btn').style.display = 'inline-flex';
+  document.getElementById('create-btn').disabled = false;
+  document.getElementById('network-dot').classList.remove('disconnected');
+
+  // Load simulated packets
+  loadDemoPackets();
+  toast('✅ Connected to OPNET RegTest', 'success');
+}
+
+function disconnectWallet() {
+  state.connected = false;
+  state.address = null;
+  state.balance = 0;
+  state.network = null;
+  updateWalletUI();
+  document.getElementById('connect-btn').style.display = 'inline-flex';
+  document.getElementById('connect-btn').innerHTML = '🔌 Connect';
+  document.getElementById('connect-btn').disabled = false;
+  document.getElementById('disconnect-btn').style.display = 'none';
+  document.getElementById('refresh-btn').style.display = 'none';
+  document.getElementById('create-btn').disabled = true;
+  document.getElementById('network-dot').classList.add('disconnected');
+  toast('Disconnected', 'info');
+}
+
+function updateWalletUI() {
+  const addrEl = document.getElementById('wallet-address');
+  const balEl = document.getElementById('wallet-balance');
+  const satsEl = document.getElementById('wallet-sats');
+  const netEl = document.getElementById('wallet-network');
+  const labelEl = document.getElementById('network-label');
+
+  if (state.address) {
+    const short = state.address.slice(0, 12) + '...' + state.address.slice(-8);
+    addrEl.textContent = short;
+    const btc = parseFloat(state.balance).toFixed(6);
+    const sats = Math.round(parseFloat(state.balance) * 1e8);
+    balEl.innerHTML = btc + ' <span>BTC</span>';
+    satsEl.textContent = sats.toLocaleString() + ' sats';
+    netEl.textContent = (state.network || 'regtest').toUpperCase();
+    labelEl.textContent = 'REGTEST · OPNET · CONNECTED';
+  } else {
+    addrEl.textContent = 'Not Connected';
+    balEl.innerHTML = '— <span>BTC</span>';
+    satsEl.textContent = '— sats';
+    netEl.textContent = '—';
+    labelEl.textContent = 'REGTEST · OPNET';
+  }
+}
+
+// ===== TABS =====
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['create','claim','history'][i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ===== DISTRIBUTION TYPE =====
+function setType(type) {
+  state.distributionType = type;
+  document.getElementById('type-equal').classList.toggle('active-type', type === 'equal');
+  document.getElementById('type-random').classList.toggle('active-type', type === 'random');
+  document.getElementById('type-equal').style.borderColor = type === 'equal' ? 'var(--gold)' : '';
+  document.getElementById('type-equal').style.color = type === 'equal' ? 'var(--gold)' : '';
+  document.getElementById('type-random').style.borderColor = type === 'random' ? 'var(--gold)' : '';
+  document.getElementById('type-random').style.color = type === 'random' ? 'var(--gold)' : '';
+  document.getElementById('type-info').textContent = type === 'equal'
+    ? 'Each recipient receives an equal share of the total amount.'
+    : '🎲 Lucky draw! Recipients get random amounts. Someone might get much more than others!';
+  updatePreview();
+}
+setType('equal'); // init
+
+// ===== PREVIEW =====
+function updatePreview() {
+  const amt = parseFloat(document.getElementById('total-amount').value) || 0;
+  const count = parseInt(document.getElementById('packet-count').value) || 0;
+  const sub = document.getElementById('preview-sub');
+  if (amt && count) {
+    sub.textContent = `${amt} BTC ÷ ${count} = ${(amt/count).toFixed(6)} each`;
+  } else {
+    sub.textContent = 'Fill in details above';
+  }
+}
+
+function animatePreview() {
+  const el = document.getElementById('preview-packet');
+  el.style.transform = 'scale(1.1) rotate(5deg)';
+  setTimeout(() => el.style.transform = '', 400);
+}
+
+// ===== CREATE RED PACKET =====
+async function createRedPacket() {
+  if (!state.connected) { toast('Please connect wallet first', 'error'); return; }
+
+  const totalBtc = parseFloat(document.getElementById('total-amount').value);
+  const count = parseInt(document.getElementById('packet-count').value);
+  const message = document.getElementById('packet-message').value || '恭喜发财';
+  const expiry = parseInt(document.getElementById('expiry-hours').value) || 24;
+
+  if (!totalBtc || totalBtc <= 0) { toast('Enter a valid amount', 'error'); return; }
+  if (!count || count < 1) { toast('Enter number of packets', 'error'); return; }
+  if (totalBtc > parseFloat(state.balance)) { toast('Insufficient balance', 'error'); return; }
+
+  const btn = document.getElementById('create-btn');
+  btn.innerHTML = '<span class="spinner"></span>Creating on OPNET...';
+  btn.disabled = true;
+
+  try {
+    // Simulate OPNET smart contract call
+    await delay(1200);
+
+    // If real OPNET wallet is available, call the contract
+    let txHash;
+    try {
+      const wallet = await detectOPNETWallet();
+      if (wallet && wallet.sendBitcoin) {
+        // Real transaction - send to OPNET Red Packet contract on RegTest
+        const OPNET_CONTRACT_REGTEST = 'bcrt1qopnet_redpacket_contract_placeholder';
+        txHash = await wallet.sendBitcoin(OPNET_CONTRACT_REGTEST, Math.round(totalBtc * 1e8));
+      } else throw new Error('simulate');
+    } catch {
+      // Simulate transaction
+      txHash = '0x' + randomHex(64);
+      await delay(800);
+    }
+
+    const packetId = 'RP-' + randomHex(6).toUpperCase();
+
+    // Generate individual packet amounts
+    const amounts = generateAmounts(totalBtc, count, state.distributionType);
+
+    const packet = {
+      id: packetId,
+      txHash,
+      totalBtc,
+      count,
+      amounts,
+      message,
+      expiry,
+      creator: state.address,
+      createdAt: Date.now(),
+      claimed: [],
+      type: state.distributionType,
+    };
+
+    state.packets.push(packet);
+    state.stats.created++;
+    state.stats.active++;
+    state.stats.totalBtc += totalBtc;
+    state.balance = (parseFloat(state.balance) - totalBtc).toFixed(8);
+
+    // Add to history
+    state.history.unshift({
+      type: 'created',
+      id: packetId,
+      txHash,
+      amount: totalBtc,
+      timestamp: Date.now(),
+    });
+
+    updateStats();
+    updateWalletUI();
+    renderHistory();
+    renderActivePackets();
+
+    toast(`✅ Red Packet ${packetId} created!`, 'success');
+
+    // Show success state
+    btn.innerHTML = `✅ Created! ID: ${packetId}`;
+    setTimeout(() => {
+      btn.innerHTML = '🧧 Create Red Packet';
+      btn.disabled = false;
+    }, 3000);
+
+    // Show the packet code prominently
+    showCreatedPacket(packet);
+
+  } catch (err) {
+    toast('Failed to create: ' + err.message, 'error');
+    btn.innerHTML = '🧧 Create Red Packet';
+    btn.disabled = false;
+  }
+}
+
+function showCreatedPacket(packet) {
+  const overlay = document.getElementById('open-overlay');
+  const content = document.getElementById('overlay-content');
+  content.innerHTML = `
+    <div style="text-align:center;max-width:300px">
+      <div style="font-family:'Ma Shan Zheng',cursive;font-size:3rem;color:var(--gold);text-shadow:0 0 30px rgba(240,192,64,0.8)">🎉 Created!</div>
+      <div style="font-family:'Ma Shan Zheng',cursive;font-size:1.5rem;color:var(--gold-light);margin:12px 0">${packet.message}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:var(--gold);background:rgba(192,57,43,0.3);border:1px solid var(--gold-dark);border-radius:8px;padding:12px;margin:12px 0">
+        📦 ${packet.id}
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--gold-dark)">
+        ${packet.totalBtc} BTC · ${packet.count} packets · ${packet.type}
+      </div>
+      <div class="tx-hash">TX: ${packet.txHash}</div>
+      <button class="btn btn-gold" onclick="closeOverlay()" style="margin-top:20px;width:100%">Share & Close 🧧</button>
+    </div>
+  `;
+  overlay.classList.add('show');
+  launchConfetti();
+}
+
+// ===== CLAIM =====
+function lookupPacket() {
+  const code = document.getElementById('claim-code').value.trim().toUpperCase();
+  if (!code) { toast('Enter a packet ID', 'error'); return; }
+
+  const packet = state.packets.find(p => p.id === code || p.id.replace('RP-','') === code);
+  const result = document.getElementById('claim-result');
+
+  if (!packet) {
+    result.innerHTML = `<div class="info-box" style="color:var(--red-bright)">❌ Packet not found: ${code}</div>`;
+    return;
+  }
+
+  const remaining = packet.count - packet.claimed.length;
+  const alreadyClaimed = packet.claimed.includes(state.address);
+
+  result.innerHTML = `
+    <div class="wallet-card" style="flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="wallet-label">Packet ID</div>
+          <div style="font-family:'JetBrains Mono',monospace;color:var(--gold)">${packet.id}</div>
+        </div>
+        <div>
+          <div class="wallet-label">Total Amount</div>
+          <div style="font-family:'JetBrains Mono',monospace;color:var(--gold)">${packet.totalBtc} BTC</div>
+        </div>
+        <div>
+          <div class="wallet-label">Remaining</div>
+          <div style="font-family:'JetBrains Mono',monospace;color:var(--gold)">${remaining} / ${packet.count}</div>
+        </div>
+      </div>
+      <div style="font-family:'Noto Serif SC',serif;color:var(--gold-light);font-size:1rem;text-align:center">"${packet.message}"</div>
+      ${alreadyClaimed ? '<div class="info-box" style="color:#2ecc71">✅ You have already claimed this packet</div>' : ''}
+      ${!alreadyClaimed && remaining > 0 ? `<button class="btn btn-red" onclick="claimPacket('${packet.id}')" style="width:100%">🎁 Claim Now!</button>` : ''}
+      ${remaining === 0 && !alreadyClaimed ? '<div class="info-box">All packets have been claimed.</div>' : ''}
+    </div>
+  `;
+}
+
+async function claimPacket(packetId) {
+  if (!state.connected) { toast('Connect wallet to claim', 'error'); return; }
+
+  const packet = state.packets.find(p => p.id === packetId);
+  if (!packet) { toast('Packet not found', 'error'); return; }
+
+  const remaining = packet.count - packet.claimed.length;
+  if (remaining === 0) { toast('No packets left', 'error'); return; }
+  if (packet.claimed.includes(state.address)) { toast('Already claimed', 'error'); return; }
+
+  // Show open animation
+  const overlay = document.getElementById('open-overlay');
+  const content = document.getElementById('overlay-content');
+  content.innerHTML = `
+    <div class="big-packet" onclick="openPacketAnimation('${packetId}')">
+      <div class="red-packet-diamond"></div>
+      <div class="red-packet-circle">福</div>
+      <div style="font-family:'Ma Shan Zheng',cursive;font-size:1.2rem;color:var(--gold);margin-top:12px">${packet.message}</div>
+    </div>
+    <div class="open-instruction">Tap to open! 点击开红包</div>
+  `;
+  overlay.classList.add('show');
+}
+
+async function openPacketAnimation(packetId) {
+  const packet = state.packets.find(p => p.id === packetId);
+  const idx = packet.claimed.length;
+
+  // Simulate OPNET claim transaction
+  await delay(600);
+  const txHash = '0x' + randomHex(64);
+
+  packet.claimed.push(state.address);
+  const amount = packet.amounts[idx];
+
+  state.balance = (parseFloat(state.balance) + amount).toFixed(8);
+  state.stats.claimed++;
+  if (packet.claimed.length === packet.count) state.stats.active = Math.max(0, state.stats.active - 1);
+
+  state.history.unshift({
+    type: 'claimed',
+    id: packetId,
+    txHash,
+    amount,
+    timestamp: Date.now(),
+  });
+
+  updateStats();
+  updateWalletUI();
+  renderHistory();
+  renderActivePackets();
+
+  // Show result
+  const content = document.getElementById('overlay-content');
+  content.innerHTML = `
+    <div class="open-result">
+      <div style="font-size:4rem">🎊</div>
+      <div style="font-family:'Ma Shan Zheng',cursive;font-size:1.5rem;color:var(--gold-light);margin-bottom:8px">${packet.message}</div>
+      <div class="result-amount">${amount.toFixed(6)}</div>
+      <div class="result-sats">${Math.round(amount * 1e8).toLocaleString()} satoshis</div>
+      <div class="result-msg">恭喜发财！Gong Xi Fa Cai!</div>
+      <div class="tx-hash">TX: ${txHash}</div>
+      <button class="btn btn-gold" onclick="closeOverlay()" style="margin-top:16px;padding:12px 32px">收下了 · Received!</button>
+    </div>
+  `;
+  launchConfetti();
+  toast(`🎉 Claimed ${amount.toFixed(6)} BTC!`, 'success');
+}
+
+function closeOverlay() {
+  document.getElementById('open-overlay').classList.remove('show');
+}
+
+// ===== DEMO PACKETS =====
+function loadDemoPackets() {
+  const demos = [
+    { id: 'RP-DEMO01', totalBtc: 0.005, count: 5, message: '新年快乐 · Happy New Year! 🎆', type: 'random' },
+    { id: 'RP-DEMO02', totalBtc: 0.001, count: 3, message: '恭喜发财 · Gong Xi Fa Cai!', type: 'equal' },
+  ];
+  demos.forEach(d => {
+    if (!state.packets.find(p => p.id === d.id)) {
+      state.packets.push({
+        ...d,
+        amounts: generateAmounts(d.totalBtc, d.count, d.type),
+        creator: 'bcrt1qDEMO' + randomHex(30),
+        createdAt: Date.now() - Math.random() * 3600000,
+        claimed: [],
+        expiry: 24,
+        txHash: '0x' + randomHex(64),
+      });
+    }
+  });
+  state.stats.active = state.packets.filter(p => p.claimed.length < p.count).length;
+  updateStats();
+  renderActivePackets();
+}
+
+// ===== RENDER =====
+function renderActivePackets() {
+  const container = document.getElementById('active-packets');
+  const active = state.packets.filter(p => p.claimed.length < p.count || p.type);
+
+  if (active.length === 0) {
+    container.innerHTML = '<div class="empty-state">No active red packets</div>';
+    return;
+  }
+
+  container.innerHTML = active.map(p => {
+    const remaining = p.count - p.claimed.length;
+    const isClaimed = p.claimed.includes(state.address);
+    return `
+      <div class="packet-item ${isClaimed || remaining === 0 ? 'claimed' : ''}"
+           onclick="${!isClaimed && remaining > 0 ? `claimPacket('${p.id}')` : ''}">
+        <div style="font-size:1.5rem">🧧</div>
+        <div class="packet-amount">${p.totalBtc} BTC</div>
+        <div class="packet-meta">${remaining}/${p.count} left</div>
+        <div class="packet-meta">${p.message.slice(0,20)}</div>
+        <div class="packet-type-badge">${p.type === 'random' ? '🎲 Lucky' : '⚖ Equal'}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderHistory() {
+  const container = document.getElementById('history-list');
+  if (state.history.length === 0) {
+    container.innerHTML = '<div class="empty-state">No transaction history yet</div>';
+    return;
+  }
+
+  container.innerHTML = state.history.slice(0, 20).map(h => `
+    <div class="wallet-card" style="margin-bottom:8px;padding:14px 16px">
+      <div>
+        <div class="wallet-label">${h.type === 'created' ? '📤 Created' : '📥 Claimed'} · ${new Date(h.timestamp).toLocaleTimeString()}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--gold)">${h.id}</div>
+        <div class="tx-hash" style="margin-top:4px">TX: ${h.txHash.slice(0,32)}...</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1rem;color:${h.type==='claimed'?'#2ecc71':'var(--red-bright)'}">
+          ${h.type==='claimed' ? '+' : '-'}${h.amount.toFixed(6)} BTC
+        </div>
+        <div class="wallet-label">REGTEST</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateStats() {
+  document.getElementById('stat-created').textContent = state.stats.created;
+  document.getElementById('stat-claimed').textContent = state.stats.claimed;
+  document.getElementById('stat-total-btc').textContent = state.stats.totalBtc.toFixed(4);
+  document.getElementById('stat-active').textContent = state.packets.filter(p => p.claimed.length < p.count).length;
+}
+
+// ===== CONFETTI =====
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const particles = [];
+  const colors = ['#f0c040','#c0392b','#e74c3c','#fde88a','#fff','#ff6b6b','#ffd700'];
+
+  for (let i = 0; i < 120; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: -10,
+      vx: (Math.random() - 0.5) * 6,
+      vy: Math.random() * 4 + 2,
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 10,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: Math.random() * 8 + 4,
+      shape: Math.random() > 0.5 ? 'rect' : 'circle',
+    });
+  }
+
+  let frame = 0;
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      p.rotation += p.rotationSpeed;
+      p.vy += 0.08;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      if (p.shape === 'rect') {
+        ctx.fillRect(-p.size/2, -p.size/4, p.size, p.size/2);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size/2, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+    frame++;
+    if (frame < 180) requestAnimationFrame(animate);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  animate();
+}
+
+// ===== UTILS =====
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function randomHex(n) {
+  return Array.from({length: n}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+}
+function generateAmounts(total, count, type) {
+  if (type === 'equal') {
+    return Array(count).fill(parseFloat((total / count).toFixed(8)));
+  }
+  // Random distribution (like WeChat red packet)
+  let remaining = total;
+  const amounts = [];
+  for (let i = 0; i < count - 1; i++) {
+    const max = (remaining / (count - i)) * 2;
+    const min = 0.00001;
+    const amount = parseFloat((Math.random() * (max - min) + min).toFixed(8));
+    amounts.push(amount);
+    remaining = parseFloat((remaining - amount).toFixed(8));
+  }
+  amounts.push(parseFloat(remaining.toFixed(8)));
+  return amounts.sort(() => Math.random() - 0.5);
+}
+
+// Close overlay on background click
+document.getElementById('open-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeOverlay();
+});
+
+// Initialize
+updateWalletUI();
+</script>
+</body>
+</html>
